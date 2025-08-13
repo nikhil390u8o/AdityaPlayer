@@ -310,17 +310,28 @@ def chat_admins_only(mystic):
 
 
 async def get_stream_info(query, streamtype):
-    api_url = "https://spotify-vert-nine.vercel.app/search"
-    api_key = "oldkey"
-    video = True if streamtype.lower() == "video" else False
-    params = {"query": query, "video": video, "api_key": api_key}
+    api_url = "https://your-new-api-endpoint.com/search"
+    params = {"q": query}  # use correct param for your API
 
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.get(api_url, params=params)
             response.raise_for_status()
-            return response.json()
-    except Exception:
+            result = response.json()
+
+            # Map API response to expected format
+            info = {
+                "title": result.get("title"),
+                "thumbnail": result.get("image") or result.get("cover"),
+                "stream_url": result.get("download_link"),
+                "duration": 204 if not result.get("duration") else int(result.get("duration").replace(":", "")),  # adjust as needed
+                "channel": result.get("artist"),
+                "link": result.get("spotify_url"),
+                "stream_type": "Audio",  # or "Video" if appropriate
+            }
+            return info if info["stream_url"] else {}
+    except Exception as e:
+        print(f"API Error: {e}")
         return {}
 
 
