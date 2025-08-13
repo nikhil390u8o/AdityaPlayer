@@ -311,7 +311,7 @@ def chat_admins_only(mystic):
 
 async def get_stream_info(query, streamtype):
     api_url = "https://your-new-api-endpoint.com/search"
-    params = {"q": query}  # use correct param for your API
+    params = {"q": query}
 
     try:
         async with httpx.AsyncClient(timeout=60) as client:
@@ -319,16 +319,17 @@ async def get_stream_info(query, streamtype):
             response.raise_for_status()
             result = response.json()
 
-            # Map API response to expected format
+            # Map your API's fields to what the rest of the bot expects
             info = {
                 "title": result.get("title"),
                 "thumbnail": result.get("image") or result.get("cover"),
                 "stream_url": result.get("download_link"),
-                "duration": 204 if not result.get("duration") else int(result.get("duration").replace(":", "")),  # adjust as needed
+                "duration": result.get("duration"),
                 "channel": result.get("artist"),
                 "link": result.get("spotify_url"),
-                "stream_type": "Audio",  # or "Video" if appropriate
+                "stream_type": "Audio",  # or "Video" if you want
             }
+            # Only return if a stream_url exists
             return info if info["stream_url"] else {}
     except Exception as e:
         print(f"API Error: {e}")
