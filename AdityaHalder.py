@@ -311,9 +311,11 @@ def chat_admins_only(mystic):
 
 
 
+import yt_dlp
+
 async def get_stream_info(query, streamtype):
     """
-    Search and fetch YouTube audio/video using yt-dlp.
+    Search and fetch YouTube audio/video using yt-dlp with guaranteed stream URL.
     """
     try:
         ydl_opts = {
@@ -321,23 +323,39 @@ async def get_stream_info(query, streamtype):
             "skip_download": True,
             "format": "bestaudio/best" if streamtype.lower() == "audio" else "bestvideo+bestaudio",
             "noplaylist": True,
-            "default_search": "ytsearch1",  # search YouTube, pick first result
+            "default_search": "ytsearch1",
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(query, download=False)
-            if "entries" in info:  # search result
+            if "entries" in info:  # if search result, take first
                 info = info["entries"][0]
+
+        # pick best available format
+        stream_url = None
+        if "url" in info:  # direct URL available
+            stream_url = info["url"]
+        elif "formats" in info and len(info["formats"]) > 0:
+            # pick bestaudio format
+            for f in reversed(info["formats"]):
+                if f.get("acodec") != "none":  # ensure it's audio
+                    stream_url = f["url"]
+                    break
+
+        if not stream_url:
+            return {}
 
         return {
             "title": info.get("title"),
-            "url": info.get("url"),
+            "url": stream_url,
             "webpage_url": info.get("webpage_url"),
             "duration": info.get("duration"),
             "thumbnail": info.get("thumbnail"),
         }
+
     except Exception as e:
         print(f"yt-dlp error: {e}")
         return {}
+
 
 
 
