@@ -1,5 +1,6 @@
 import aiofiles, aiohttp, asyncio, base64, gc, httpx, io, json
 import logging, numpy as np, os, random, re, sys, textwrap
+import yt_dlp
 
 from os import getenv
 from io import BytesIO
@@ -309,31 +310,35 @@ def chat_admins_only(mystic):
     return wrapper
 
 
+
 async def get_stream_info(query, streamtype):
-    api_url = "https://your-new-api-endpoint.com/search"
-    params = {"q": query}
-
+    """
+    Search and fetch YouTube audio/video using yt-dlp.
+    """
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.get(api_url, params=params)
-            response.raise_for_status()
-            result = response.json()
+        ydl_opts = {
+            "quiet": True,
+            "skip_download": True,
+            "format": "bestaudio/best" if streamtype.lower() == "audio" else "bestvideo+bestaudio",
+            "noplaylist": True,
+            "default_search": "ytsearch1",  # search YouTube, pick first result
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(query, download=False)
+            if "entries" in info:  # search result
+                info = info["entries"][0]
 
-            # Map your API's fields to what the rest of the bot expects
-            info = {
-                "title": result.get("title"),
-                "thumbnail": result.get("image") or result.get("cover"),
-                "stream_url": result.get("download_link"),
-                "duration": result.get("duration"),
-                "channel": result.get("artist"),
-                "link": result.get("spotify_url"),
-                "stream_type": "Audio",  # or "Video" if you want
-            }
-            # Only return if a stream_url exists
-            return info if info["stream_url"] else {}
+        return {
+            "title": info.get("title"),
+            "url": info.get("url"),
+            "webpage_url": info.get("webpage_url"),
+            "duration": info.get("duration"),
+            "thumbnail": info.get("thumbnail"),
+        }
     except Exception as e:
-        print(f"API Error: {e}")
+        print(f"yt-dlp error: {e}")
         return {}
+
 
 
 
