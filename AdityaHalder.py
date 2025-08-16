@@ -314,15 +314,17 @@ def chat_admins_only(mystic):
 
 
 async def get_stream_info(query, streamtype):
+    print(f"[DEBUG] Searching for: {query}")
     try:
-        # First try pytube
         from pytube import Search
         s = Search(query)
         if not s.results:
-            return {}
+            print("[DEBUG] pytube: No results found")
+            raise ValueError("No results in pytube search")
         video = s.results[0]
         stream = video.streams.filter(only_audio=True).first()
         if stream and stream.url:
+            print("[DEBUG] pytube: Found working audio stream")
             return {
                 "title": video.title,
                 "url": stream.url,
@@ -331,12 +333,13 @@ async def get_stream_info(query, streamtype):
                 "thumbnail": video.thumbnail_url,
             }
         else:
-            raise ValueError("No audio stream from pytube")
+            print("[DEBUG] pytube: No audio stream found")
+            raise ValueError("No audio stream in pytube")
     except Exception as e:
-        print(f"pytube error: {e}, trying yt_dlp fallback...")
-        # Fallback to yt_dlp
+        print(f"[DEBUG] pytube failed: {e}")
         try:
             import yt_dlp
+            print("[DEBUG] Trying yt_dlp fallback...")
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'noplaylist': True,
@@ -346,16 +349,21 @@ async def get_stream_info(query, streamtype):
                 info = ydl.extract_info(f"ytsearch:{query}", download=False)
                 if 'entries' in info and info['entries']:
                     video = info['entries'][0]
+                    print("[DEBUG] yt_dlp: Found audio stream")
                     return {
                         "title": video.get('title'),
-                        "url": video.get('url'),  # direct stream URL
+                        "url": video.get('url'),
                         "webpage_url": video.get('webpage_url'),
                         "duration": video.get('duration'),
                         "thumbnail": video.get('thumbnail'),
                     }
+                else:
+                    print("[DEBUG] yt_dlp: No results found")
         except Exception as e2:
-            print(f"yt_dlp error: {e2}")
+            print(f"[DEBUG] yt_dlp failed: {e2}")
+    print("[DEBUG] Returning empty stream info")
     return {}
+
 
 
 
