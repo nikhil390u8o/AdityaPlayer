@@ -1,3 +1,4 @@
+pytube
 ffmpeg-python
 yt-dlp
 aiofiles==24.1.0
