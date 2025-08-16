@@ -1,7 +1,7 @@
 import aiofiles, aiohttp, asyncio, base64, gc, httpx, io, json
 import logging, numpy as np, os, random, re, sys, textwrap
 import yt_dlp
-
+from pytube import Search
 from os import getenv
 from io import BytesIO
 from dotenv import load_dotenv
@@ -311,65 +311,24 @@ def chat_admins_only(mystic):
 
 
 
-import yt_dlp
 
-
-import yt_dlp
 
 async def get_stream_info(query, streamtype):
-    """
-    Search and fetch YouTube audio/video using yt-dlp with guaranteed stream URL.
-    """
     try:
-        ydl_opts = {
-            "quiet": True,
-            "skip_download": True,
-            "format": "bestaudio/best" if streamtype.lower() == "audio" else "bestvideo+bestaudio",
-            "noplaylist": True,
-            "default_search": "ytsearch1",  # search YouTube, pick first result
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(query, download=False)
-            if "entries" in info:  # if search result, take first entry
-                info = info["entries"][0]
-
-        # Force-pick best audio stream
-        stream_url = None
-        if "url" in info:
-            stream_url = info["url"]
-        elif "formats" in info:
-            for f in reversed(info["formats"]):
-                if f.get("acodec") != "none":  # ensure it's audio
-                    stream_url = f["url"]
-                    break
-
-        if not stream_url:
-            return {}
-
+        s = Search(query)
+        video = s.results[0]
+        stream = video.streams.filter(only_audio=True).first()
         return {
-            "title": info.get("title"),
-            "url": stream_url,          # required by /play
-            "webpage_url": info.get("webpage_url"),
-            "duration": info.get("duration"),
-            "thumbnail": info.get("thumbnail"),
+            "title": video.title,
+            "url": stream.url,
+            "webpage_url": video.watch_url,
+            "duration": video.length,
+            "thumbnail": video.thumbnail_url,
         }
-
     except Exception as e:
-        print(f"yt-dlp error: {e}")
+        print(f"pytube error: {e}")
         return {}
 
-
-        return {
-            "title": info.get("title"),
-            "url": stream_url,
-            "webpage_url": info.get("webpage_url"),
-            "duration": info.get("duration"),
-            "thumbnail": info.get("thumbnail"),
-        }
-
-    except Exception as e:
-        print(f"yt-dlp error: {e}")
-        return {}
 
 
 
