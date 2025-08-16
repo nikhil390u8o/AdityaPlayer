@@ -315,19 +315,48 @@ def chat_admins_only(mystic):
 
 async def get_stream_info(query, streamtype):
     try:
+        # First try pytube
+        from pytube import Search
         s = Search(query)
+        if not s.results:
+            return {}
         video = s.results[0]
         stream = video.streams.filter(only_audio=True).first()
-        return {
-            "title": video.title,
-            "url": stream.url,
-            "webpage_url": video.watch_url,
-            "duration": video.length,
-            "thumbnail": video.thumbnail_url,
-        }
+        if stream and stream.url:
+            return {
+                "title": video.title,
+                "url": stream.url,
+                "webpage_url": video.watch_url,
+                "duration": video.length,
+                "thumbnail": video.thumbnail_url,
+            }
+        else:
+            raise ValueError("No audio stream from pytube")
     except Exception as e:
-        print(f"pytube error: {e}")
-        return {}
+        print(f"pytube error: {e}, trying yt_dlp fallback...")
+        # Fallback to yt_dlp
+        try:
+            import yt_dlp
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'noplaylist': True,
+                'quiet': True
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"ytsearch:{query}", download=False)
+                if 'entries' in info and info['entries']:
+                    video = info['entries'][0]
+                    return {
+                        "title": video.get('title'),
+                        "url": video.get('url'),  # direct stream URL
+                        "webpage_url": video.get('webpage_url'),
+                        "duration": video.get('duration'),
+                        "thumbnail": video.get('thumbnail'),
+                    }
+        except Exception as e2:
+            print(f"yt_dlp error: {e2}")
+    return {}
+
 
 
 
